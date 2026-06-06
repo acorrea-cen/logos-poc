@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite no soporta enums — se usan String con valores constantes definidos en types.ts
+
+model Video {
+  id String @id @default(cuid())
+
+  // Metadata básica
+  title       String
+  description String?
+  filename    String
+  filepath    String
+  fileSize    BigInt
+  duration    Int     // segundos
+  mimeType    String
+
+  // Metadata de capacitación
+  instructor String?
+  category   String? // "Cuentas", "Tarjetas", "Compliance", etc.
+  topic      String?
+  recordedAt DateTime?
+
+  // Procesamiento — valores: UPLOADED | EXTRACTING_AUDIO | TRANSCRIBING | GENERATING_EMBEDDINGS | READY | ERROR
+  status          String  @default("UPLOADED")
+  processingError String?
+
+  // Thumbnail
+  thumbnailPath String?
+
+  // Relaciones
+  transcript Transcript?
+  segments   Segment[]
+  jobs       Job[]
+
+  uploadedAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([status])
+  @@index([category])
+  @@index([instructor])
+  @@index([recordedAt])
+}
+
+model Transcript {
+  id      String @id @default(cuid())
+  videoId String @unique
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  fullText  String
+  language  String @default("es")
+
+  wordCount      Int
+  characterCount Int
+  avgConfidence  Float?
+
+  isEdited Boolean   @default(false)
+  editedAt DateTime?
+  editedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Segment {
+  id      String @id @default(cuid())
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  startTime    Float
+  endTime      Float
+  segmentIndex Int
+
+  text String
+
+  confidence Float?
+
+  originalText String?
+  isEdited     Boolean @default(false)
+
+  embeddingId String? @unique
+
+  createdAt DateTime @default(now())
+
+  @@index([videoId])
+  @@index([videoId, segmentIndex])
+  @@index([videoId, startTime])
+}
+
+model VectorEmbedding {
+  id        String @id @default(cuid())
+  segmentId String @unique
+
+  // JSON array de floats — en producción se migra a pgvector
+  vector String
+
+  createdAt DateTime @default(now())
+}
+
+model Job {
+  id      String @id @default(cuid())
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  // Valores type: EXTRACT_AUDIO | TRANSCRIBE | GENERATE_EMBEDDINGS | GENERATE_THUMBNAIL
+  type String
+  // Valores status: PENDING | RUNNING | COMPLETED | FAILED | CANCELLED
+  status   String @default("PENDING")
+  priority Int    @default(0)
+
+  progress               Int  @default(0)
+  estimatedTimeRemaining Int?
+
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  error    String?
+  attempts Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([videoId])
+}
+
+model SearchHistory {
+  id          String   @id @default(cuid())
+  query       String
+  resultCount Int
+  searchType  String // "fulltext" | "semantic" | "hybrid"
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
