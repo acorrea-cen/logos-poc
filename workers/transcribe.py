@@ -44,6 +44,8 @@ def transcribe(audio_path: str, output_path: str, model_path: str) -> dict:
         compute_type="int8",
         cpu_threads=4,
         num_workers=1,
+        # large-v3: mejor calidad en español, procesa más lento (OK para overnight)
+        # Para volver a medium: cambiar WHISPER_MODEL_PATH=medium en .env.local
     )
 
     log(f"Transcribiendo {Path(audio_path).name}...")

@@ -9,6 +9,7 @@ export interface SearchResult {
   text: string;
   highlightedText: string;
   score: number;
+  semanticScore?: number; // cosine similarity original, preservado en hybrid
   matchType: "fulltext" | "semantic" | "hybrid";
   thumbnailPath: string | null;
 }

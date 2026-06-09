@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import { getEmbedding } from "@/lib/embeddings/ollama";
+import { getQueryEmbedding } from "@/lib/embeddings/ollama";
 import type { SearchResult, SearchFilters } from "./types";
 import { highlight } from "./highlight";
 
@@ -21,34 +21,59 @@ export async function semanticSearch(
   filters: SearchFilters = {},
   limit = 20
 ): Promise<SearchResult[]> {
-  const queryVec = await getEmbedding(query);
+  if (query.trim().length < 4) return [];
 
-  // Load all embeddings (feasible for POC — ~15k segments max ≈ few MB in memory)
-  const embeddings = await prisma.vectorEmbedding.findMany();
+  // Usar search_query: prefix — nomic-embed-text hace retrieval asimétrico correcto
+  const queryVec = await getQueryEmbedding(query);
+
+  // Load embeddings junto con la longitud del segmento.
+  // Segmentos muy cortos (<8 palabras) producen embeddings erráticos — el modelo no tiene
+  // suficiente contenido para ubicarlos en una zona semántica específica del espacio vectorial
+  // y terminan matcheando con queries completamente distintas.
+  const [embeddings, allSegmentsShort] = await Promise.all([
+    prisma.vectorEmbedding.findMany(),
+    prisma.segment.findMany({ select: { id: true, text: true } }),
+  ]);
 
   if (embeddings.length === 0) return [];
 
-  // Score all embeddings y filtrar por umbral mínimo de similitud
-  // Con nomic-embed-text, consultas sin sentido dan ~0.2-0.3; texto relevante da >0.45
-  const allScored = embeddings.map((emb) => {
-    const vec: number[] = JSON.parse(emb.vector);
-    return { segmentId: emb.segmentId, score: cosineSimilarity(queryVec, vec) };
-  });
+  const segWordCount = new Map(
+    allSegmentsShort.map((s) => [s.id, s.text.trim().split(/\s+/).length])
+  );
+  const MIN_WORDS = 8;
 
+  const allScored = embeddings
+    .filter((emb) => (segWordCount.get(emb.segmentId) ?? 0) >= MIN_WORDS)
+    .map((emb) => {
+      const vec: number[] = JSON.parse(emb.vector);
+      return { segmentId: emb.segmentId, score: cosineSimilarity(queryVec, vec) };
+    });
+
+  const n = allScored.length;
+  const avgScore = allScored.reduce((acc, s) => acc + s.score, 0) / n;
+  const stdDev = Math.sqrt(allScored.reduce((acc, s) => acc + (s.score - avgScore) ** 2, 0) / n);
   const maxScore = Math.max(...allScored.map((s) => s.score));
-  const avgScore = allScored.reduce((acc, s) => acc + s.score, 0) / allScored.length;
 
-  // Solo hay señal semántica real cuando el top score supera claramente el promedio.
-  // Con corpus homogéneo o queries sin sentido, los scores se comprimen y no hay discriminación.
-  const MIN_ABS = 0.50;        // mínimo absoluto
-  const MIN_SIGNAL = 0.10;     // gap mínimo entre top y promedio
+  // Umbral por z-score: threshold = avg + Z * stdDev
+  // Z=3.0 captura solo los outliers positivos reales de la distribución,
+  // independientemente del gap absoluto entre queries distintas.
+  // MIN_ABS como piso absoluto para evitar matches con corpus muy comprimido.
+  const Z_SCORE = 3.0;
+  const MIN_ABS = 0.55;
+  const MIN_SIGNAL = 0.08; // gap mínimo para que exista señal real
 
-  if (maxScore < MIN_ABS || maxScore - avgScore < MIN_SIGNAL) return [];
+  const gap = maxScore - avgScore;
+  if (maxScore < MIN_ABS || gap < MIN_SIGNAL) {
+    console.log(`[semantic] "${query}" → SKIP top=${maxScore.toFixed(3)} avg=${avgScore.toFixed(3)} gap=${gap.toFixed(3)}`);
+    return [];
+  }
 
-  // Retornar solo los segmentos cercanos al top (dentro del 90% del score máximo)
+  const dynamicThreshold = Math.max(MIN_ABS, avgScore + Z_SCORE * stdDev);
   const scored = allScored
-    .filter((s) => s.score >= maxScore * 0.90)
+    .filter((s) => s.score >= dynamicThreshold)
     .sort((a, b) => b.score - a.score);
+
+  console.log(`[semantic] "${query}" → top=${maxScore.toFixed(3)} avg=${avgScore.toFixed(3)} gap=${gap.toFixed(3)} threshold=${dynamicThreshold.toFixed(3)} passing=${scored.length}`);
   const topIds = scored.slice(0, limit * 2).map((s) => s.segmentId);
   const scoreMap = new Map(scored.map((s) => [s.segmentId, s.score]));
 
@@ -96,6 +121,7 @@ export async function semanticSearch(
       text: seg.text,
       highlightedText: highlight(seg.text, terms),
       score: scoreMap.get(seg.id) ?? 0,
+      semanticScore: scoreMap.get(seg.id) ?? 0,
       matchType: "semantic" as const,
       thumbnailPath: seg.video.thumbnailPath,
     }))

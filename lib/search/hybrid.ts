@@ -28,11 +28,15 @@ export async function hybridSearch(
     rrfScores.set(r.segmentId, prev + 1 / (RRF_K + rank + 1));
   });
 
-  // Merge result objects (prefer semantic entry if in both, for highlighted text)
+  // Merge: semantic entry wins (tiene highlightedText y semanticScore)
   const resultMap = new Map<string, SearchResult>();
-  for (const r of [...ftResults, ...semResults]) {
+  for (const r of [...semResults, ...ftResults]) {
     if (!resultMap.has(r.segmentId)) {
       resultMap.set(r.segmentId, { ...r, matchType: "hybrid" });
+    } else if (r.matchType === "fulltext") {
+      // Si ya existe entrada semántica, agregar el highlightedText del fulltext
+      const existing = resultMap.get(r.segmentId)!;
+      resultMap.set(r.segmentId, { ...existing, highlightedText: r.highlightedText });
     }
   }
 

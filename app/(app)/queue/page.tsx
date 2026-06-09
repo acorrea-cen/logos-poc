@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/Header";
 import { JobProgress } from "@/components/queue/JobProgress";
+import { RetryButton } from "@/components/queue/RetryButton";
 import { prisma } from "@/lib/db/prisma";
 import { VideoStatusLabel } from "@/lib/types";
 import { CheckCircle, XCircle, Clock } from "lucide-react";
@@ -109,6 +110,9 @@ export default async function QueuePage({ searchParams }: Props) {
                         hour: "2-digit", minute: "2-digit",
                       })}
                     </span>
+                  )}
+                  {job.status === "FAILED" && (
+                    <RetryButton videoId={job.videoId} />
                   )}
                 </div>
               ))}

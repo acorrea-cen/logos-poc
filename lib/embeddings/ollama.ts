@@ -3,11 +3,11 @@ import { prisma } from "@/lib/db/prisma";
 const OLLAMA_HOST = process.env.OLLAMA_HOST ?? "http://127.0.0.1:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "nomic-embed-text";
 
-export async function getEmbedding(text: string): Promise<number[]> {
+async function fetchEmbedding(prompt: string): Promise<number[]> {
   const res = await fetch(`${OLLAMA_HOST}/api/embeddings`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: OLLAMA_MODEL, prompt: text }),
+    body: JSON.stringify({ model: OLLAMA_MODEL, prompt }),
   });
 
   if (!res.ok) {
@@ -17,6 +17,16 @@ export async function getEmbedding(text: string): Promise<number[]> {
 
   const data = (await res.json()) as { embedding: number[] };
   return data.embedding;
+}
+
+// nomic-embed-text requiere prefijos de tarea para búsqueda asimétrica correcta.
+// Sin ellos, el modelo hace similitud genérica y mezcla términos fonéticamente parecidos.
+export function getEmbedding(text: string): Promise<number[]> {
+  return fetchEmbedding(`search_document: ${text}`);
+}
+
+export function getQueryEmbedding(text: string): Promise<number[]> {
+  return fetchEmbedding(`search_query: ${text}`);
 }
 
 export async function generateEmbeddingsForVideo(
@@ -34,7 +44,7 @@ export async function generateEmbeddingsForVideo(
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
 
-    const vector = await getEmbedding(seg.text);
+    const vector = await getEmbedding(seg.text); // usa search_document: prefix
     const vectorJson = JSON.stringify(vector);
 
     // Upsert embedding

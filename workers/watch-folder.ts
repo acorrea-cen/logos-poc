@@ -61,22 +61,45 @@ async function processFile(watchedPath: string) {
       // FFmpeg no disponible — continuar sin duración
     }
 
+    // Convención: "Instructor - Categoria - Titulo.mp4"
+    // Si solo hay 2 partes: "Instructor - Titulo.mp4"
+    // Si solo hay 1 parte: usa el nombre como título
+    const baseName = filename.replace(/\.mp4$/i, "");
+    const parts = baseName.split(" - ").map((p) => p.trim()).filter(Boolean);
+    let title = baseName.replace(/[-_]/g, " ");
+    let instructor: string | undefined;
+    let category: string | undefined;
+    if (parts.length >= 3) {
+      instructor = parts[0];
+      category = parts[1];
+      title = parts.slice(2).join(" - ");
+    } else if (parts.length === 2) {
+      instructor = parts[0];
+      title = parts[1];
+    } else {
+      title = parts[0] ?? baseName;
+    }
+
     const video = await prisma.video.create({
       data: {
         id: videoId,
-        title: filename.replace(/\.mp4$/i, "").replace(/[-_]/g, " "),
+        title,
         filename,
         filepath: destPath,
         fileSize: BigInt(stat.size),
         duration,
         mimeType: "video/mp4",
         status: VideoStatus.UPLOADED,
+        ...(instructor ? { instructor } : {}),
+        ...(category ? { category } : {}),
       },
     });
 
     transcriptionQueue.add(() => runTranscriptionPipeline(video.id)).catch(console.error);
 
-    console.log(`✅ Encolado: ${video.title} (${video.id})`);
+    console.log(`✅ Encolado: ${video.title}`);
+    if (video.instructor) console.log(`   Instructor: ${video.instructor}`);
+    if (video.category)   console.log(`   Categoría:  ${video.category}`);
     console.log(`   Seguí el progreso en: http://localhost:3001/queue?videoId=${video.id}`);
   } catch (err) {
     console.error(`❌ Error procesando ${filename}:`, err);

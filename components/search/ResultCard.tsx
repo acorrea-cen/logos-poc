@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, User, Tag } from "lucide-react";
+import { Clock, User, Tag, Sparkles } from "lucide-react";
 import type { SearchResult } from "@/lib/search/types";
 
 function formatTime(seconds: number): string {
@@ -10,6 +10,14 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+// Cosine similarity suele caer en 0.50–0.90 para nomic-embed-text.
+// Lo normalizamos a 0–100% dentro de ese rango para que sea más legible.
+function similarityPercent(score: number): number {
+  const MIN = 0.45;
+  const MAX = 0.92;
+  return Math.round(Math.min(100, Math.max(0, ((score - MIN) / (MAX - MIN)) * 100)));
+}
+
 interface ResultCardProps {
   result: SearchResult;
   query: string;
@@ -17,9 +25,23 @@ interface ResultCardProps {
 
 export function ResultCard({ result }: ResultCardProps) {
   const href = `/videos/${result.videoId}?t=${Math.floor(result.startTime)}`;
+  const isSemantic = result.matchType === "semantic";
+  const isHybrid = result.matchType === "hybrid";
+  const rawSimScore = result.semanticScore ?? (isSemantic ? result.score : 0);
+  const showSimilarity = (isSemantic || isHybrid) && rawSimScore > 0;
+  const pct = showSimilarity ? similarityPercent(rawSimScore) : 0;
 
   return (
-    <Link href={href} className="group block rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-card/80 transition-all">
+    <Link
+      href={href}
+      className={`group block rounded-xl border bg-card hover:bg-card/80 transition-all ${
+        isSemantic
+          ? "border-violet-500/30 hover:border-violet-500/60"
+          : isHybrid
+          ? "border-blue-500/20 hover:border-blue-500/50"
+          : "border-border hover:border-primary/50"
+      }`}
+    >
       <div className="flex gap-4 p-4">
         {/* Thumbnail */}
         <div className="shrink-0 w-24 h-14 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
@@ -40,10 +62,27 @@ export function ResultCard({ result }: ResultCardProps) {
             <p className="text-sm font-medium text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
               {result.videoTitle}
             </p>
-            <span className="shrink-0 flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
-              <Clock className="h-3 w-3" />
-              {formatTime(result.startTime)}
-            </span>
+            <div className="shrink-0 flex items-center gap-1.5">
+              {showSimilarity && (
+                <span
+                  title={`Similitud semántica: ${pct}% (score crudo: ${result.score.toFixed(3)})`}
+                  className={`flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md ${
+                    pct >= 75
+                      ? "bg-violet-500/15 text-violet-400"
+                      : pct >= 50
+                      ? "bg-blue-500/15 text-blue-400"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <Sparkles className="h-2.5 w-2.5" />
+                  {pct}% similar
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
+                <Clock className="h-3 w-3" />
+                {formatTime(result.startTime)}
+              </span>
+            </div>
           </div>
 
           {/* Meta */}
@@ -62,11 +101,21 @@ export function ResultCard({ result }: ResultCardProps) {
             )}
           </div>
 
-          {/* Highlighted snippet */}
-          <p
-            className="text-xs text-muted-foreground leading-relaxed line-clamp-2 [&_mark]:bg-yellow-400/30 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
-            dangerouslySetInnerHTML={{ __html: result.highlightedText }}
-          />
+          {/* Snippet */}
+          {isSemantic ? (
+            // Para resultados semánticos: resaltar el fragmento completo con borde izquierdo
+            <div className="border-l-2 border-violet-500/50 pl-2">
+              <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 italic">
+                {result.text}
+              </p>
+            </div>
+          ) : (
+            // Para fulltext / hybrid: highlights por palabras exactas
+            <p
+              className="text-xs text-muted-foreground leading-relaxed line-clamp-2 [&_mark]:bg-yellow-400/30 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
+              dangerouslySetInnerHTML={{ __html: result.highlightedText }}
+            />
+          )}
         </div>
       </div>
     </Link>

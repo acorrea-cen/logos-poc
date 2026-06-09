@@ -15,7 +15,8 @@
     "gen:audio": "python scripts/generate-test-audio.py",
     "download:model": "python workers/download_model.py",
     "watch": "tsx workers/watch-folder.ts",
-    "kill:dev": "npx kill-port 3001"
+    "kill:dev": "npx kill-port 3001",
+    "reset:stuck": "python scripts/reset-stuck.py"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
