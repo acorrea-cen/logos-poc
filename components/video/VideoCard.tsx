@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { Clock, User, Tag, CheckCircle, Loader2, AlertCircle, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Clock, User, Tag, CheckCircle, Loader2, AlertCircle, Upload, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { formatDuration } from "@/lib/utils";
@@ -12,7 +16,7 @@ interface VideoCardProps {
   status: string;
   instructor?: string | null;
   category?: string | null;
-  thumbnailPath?: string | null;  // path en filesystem, sólo se usa para saber si existe
+  thumbnailPath?: string | null;
   uploadedAt: string | Date;
   wordCount?: number | null;
   latestJob?: { status: string; progress: number } | null;
@@ -42,7 +46,24 @@ export function VideoCard({
   id, title, duration, status, instructor, category,
   thumbnailPath, uploadedAt, wordCount, latestJob,
 }: VideoCardProps) {
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
   const isProcessing = ["EXTRACTING_AUDIO", "TRANSCRIBING", "GENERATING_EMBEDDINGS"].includes(status);
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`¿Eliminar "${title}"?\n\nSe borrarán el video, la transcripción y todos los embeddings. Esta acción no se puede deshacer.`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/videos/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      router.refresh();
+    } catch {
+      alert("Error al eliminar el video. Intentá de nuevo.");
+      setDeleting(false);
+    }
+  }
 
   return (
     <Link href={`/videos/${id}`} className="group block">
@@ -65,6 +86,18 @@ export function VideoCard({
           <div className="absolute top-2 right-2">
             <StatusBadge status={status} />
           </div>
+          {/* Botón eliminar — visible en hover, top-left */}
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="absolute top-2 left-2 rounded bg-black/60 p-1.5 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 disabled:opacity-40"
+            title="Eliminar video"
+          >
+            {deleting
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <Trash2 className="h-3.5 w-3.5" />
+            }
+          </button>
           {duration > 0 && (
             <div className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white font-mono">
               {formatDuration(duration)}

@@ -58,9 +58,9 @@ export async function semanticSearch(
   // Z=3.0 captura solo los outliers positivos reales de la distribución,
   // independientemente del gap absoluto entre queries distintas.
   // MIN_ABS como piso absoluto para evitar matches con corpus muy comprimido.
-  const Z_SCORE = 3.0;
-  const MIN_ABS = 0.55;
-  const MIN_SIGNAL = 0.08; // gap mínimo para que exista señal real
+  const Z_SCORE = 1.5;
+  const MIN_ABS = 0.40;
+  const MIN_SIGNAL = 0.05; // gap mínimo para que exista señal real
 
   const gap = maxScore - avgScore;
   if (maxScore < MIN_ABS || gap < MIN_SIGNAL) {

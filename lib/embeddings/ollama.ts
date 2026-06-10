@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST ?? "http://127.0.0.1:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "nomic-embed-text";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "mxbai-embed-large";
 
 async function fetchEmbedding(prompt: string): Promise<number[]> {
   const res = await fetch(`${OLLAMA_HOST}/api/embeddings`, {
@@ -19,14 +19,14 @@ async function fetchEmbedding(prompt: string): Promise<number[]> {
   return data.embedding;
 }
 
-// nomic-embed-text requiere prefijos de tarea para búsqueda asimétrica correcta.
-// Sin ellos, el modelo hace similitud genérica y mezcla términos fonéticamente parecidos.
+// mxbai-embed-large: documentos sin prefijo, queries con prefijo de instrucción.
+// nomic-embed-text usaba search_document:/search_query: — mxbai tiene convención distinta.
 export function getEmbedding(text: string): Promise<number[]> {
-  return fetchEmbedding(`search_document: ${text}`);
+  return fetchEmbedding(text);
 }
 
 export function getQueryEmbedding(text: string): Promise<number[]> {
-  return fetchEmbedding(`search_query: ${text}`);
+  return fetchEmbedding(`Represent this sentence for searching relevant passages: ${text}`);
 }
 
 export async function generateEmbeddingsForVideo(

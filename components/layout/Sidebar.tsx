@@ -46,14 +46,9 @@ export function Sidebar() {
   return (
     <aside className="flex h-full w-60 flex-col border-r border-border bg-card">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-border px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-          <span className="text-sm font-bold text-primary-foreground">λ</span>
-        </div>
-        <div>
-          <p className="text-sm font-bold tracking-wider text-foreground">LOGOS</p>
-          <p className="text-[10px] text-muted-foreground">Conocimiento Audiovisual</p>
-        </div>
+      <div className="flex h-16 flex-col items-center justify-center gap-1 border-b border-border px-4">
+        <img src="/logo.png" alt="Logo" className="h-8 w-auto object-contain" />
+        <p className="text-[10px] text-muted-foreground">Conocimiento Audiovisual</p>
       </div>
 
       {/* Nav */}
