@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Worker de transcripción con faster-whisper.
+Worker de transcripción con pywhispercpp (whisper.cpp).
 Invocado por Node.js via child_process.spawn().
 
 Protocolo de comunicación con Node:
@@ -17,6 +17,7 @@ Protocolo de comunicación con Node:
 import sys
 import json
 import argparse
+import os
 from pathlib import Path
 
 
@@ -28,70 +29,115 @@ def progress(pct: int) -> None:
     print(f"PROGRESS:{pct}", file=sys.stderr, flush=True)
 
 
-def transcribe(audio_path: str, output_path: str, model_path: str) -> dict:
+def get_audio_duration(audio_path: str) -> float:
     try:
-        from faster_whisper import WhisperModel
+        import wave
+        with wave.open(audio_path, 'rb') as wf:
+            return wf.getnframes() / wf.getframerate()
+    except Exception:
+        return 0.0
+
+
+def is_repetition(text: str, recent: list[str], window: int = 8, threshold: int = 3) -> bool:
+    """Devuelve True si el texto es una repetición de bucle de Whisper."""
+    t = text.lower().strip()
+    if not t:
+        return False
+    # Idéntico al segmento anterior
+    if recent and recent[-1] == t:
+        return True
+    # Aparece threshold+ veces en la ventana reciente
+    if recent[-window:].count(t) >= threshold:
+        return True
+    return False
+
+
+def transcribe(audio_path: str, output_path: str, model_name: str) -> dict:
+    try:
+        from pywhispercpp.model import Model
     except ImportError:
-        print("ERROR:faster-whisper no instalado. Ejecutar: pip install faster-whisper==1.0.3", file=sys.stderr, flush=True)
+        print("ERROR:pywhispercpp no instalado. Ejecutar: pip install pywhispercpp", file=sys.stderr, flush=True)
         sys.exit(1)
 
-    log(f"Cargando modelo '{model_path}' (CPU, int8)...")
+    # Normalizar nombre de modelo (ignorar paths)
+    if os.path.sep in model_name or "/" in model_name:
+        model_name = Path(model_name).name
+
+    log(f"Cargando modelo '{model_name}' (CPU)...")
     progress(2)
 
-    model = WhisperModel(
-        model_path,
-        device="cpu",
-        compute_type="int8",
-        cpu_threads=4,
-        num_workers=1,
-        # large-v3: mejor calidad en español, procesa más lento (OK para overnight)
-        # Para volver a medium: cambiar WHISPER_MODEL_PATH=medium en .env.local
+    models_dir = os.path.join(os.path.expanduser("~"), ".cache", "whisper")
+    os.makedirs(models_dir, exist_ok=True)
+
+    total_duration = get_audio_duration(audio_path) or 1.0
+    result_segments = []
+    recent_texts: list[str] = []
+    last_reported_pct = [5]
+
+    def on_segment(seg):
+        start_s = seg.t0 / 100.0
+        end_s = seg.t1 / 100.0
+        text = seg.text.strip()
+        if not text:
+            return
+
+        if is_repetition(text, recent_texts):
+            log(f"Segmento repetido descartado: {text[:60]!r}")
+            return
+
+        recent_texts.append(text.lower().strip())
+
+        confidence = 0.0
+        try:
+            p = seg.probability
+            if p == p:  # NaN check
+                confidence = round(float(p), 4)
+        except Exception:
+            pass
+
+        result_segments.append({
+            "index": len(result_segments),
+            "start": round(start_s, 3),
+            "end": round(end_s, 3),
+            "text": text,
+            "confidence": confidence,
+        })
+
+        raw_pct = (end_s / total_duration) * 95
+        pct = min(int(raw_pct) + 5, 99)
+        if pct >= last_reported_pct[0] + 2:
+            progress(pct)
+            last_reported_pct[0] = pct
+
+    model = Model(
+        model_name,
+        models_dir=models_dir,
+        n_threads=4,
+        print_realtime=False,
+        print_progress=False,
     )
 
-    log(f"Transcribiendo {Path(audio_path).name}...")
+    log(f"Transcribiendo {Path(audio_path).name} ({round(total_duration/60, 1)} min)...")
     progress(5)
 
-    segments_gen, info = model.transcribe(
+    model.transcribe(
         audio_path,
-        language="es",           # Español forzado — no auto-detectar
-        beam_size=5,
-        vad_filter=True,         # Saltea silencios → más rápido
-        vad_parameters=dict(min_silence_duration_ms=500),
-        word_timestamps=False,
+        language="es",
         initial_prompt=(
             "Capacitación bancaria en español argentino. "
             "Términos: BCRA, CBU, CVU, cuenta corriente, caja de ahorro, "
             "plazo fijo, tarjeta de crédito, débito automático, transferencia."
         ),
-        condition_on_previous_text=True,
-        temperature=0.0,         # Determinístico
+        n_threads=4,
+        no_context=True,
+        temperature=0.2,
+        new_segment_callback=on_segment,
     )
-
-    total_duration = info.duration or 1.0  # evitar división por cero
-    result_segments = []
-    last_reported_pct = 5
-
-    for segment in segments_gen:
-        raw_pct = (segment.end / total_duration) * 95  # reservar 5% final para guardado
-        pct = min(int(raw_pct) + 5, 99)
-
-        # Reportar solo cuando cambia al menos 2% — evitar spam
-        if pct >= last_reported_pct + 2:
-            progress(pct)
-            last_reported_pct = pct
-
-        result_segments.append({
-            "index": len(result_segments),
-            "start": round(segment.start, 3),
-            "end": round(segment.end, 3),
-            "text": segment.text.strip(),
-            "confidence": round(segment.avg_logprob, 4),
-        })
 
     full_text = " ".join(s["text"] for s in result_segments)
 
     result = {
-        "language": info.language,
+        "language": "es",
         "duration": round(total_duration, 3),
         "segments": result_segments,
         "full_text": full_text,
@@ -108,10 +154,10 @@ def transcribe(audio_path: str, output_path: str, model_path: str) -> dict:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Transcripción offline con faster-whisper")
+    parser = argparse.ArgumentParser(description="Transcripción offline con pywhispercpp")
     parser.add_argument("--audio", required=True, help="Path al archivo de audio (WAV recomendado)")
     parser.add_argument("--output", required=True, help="Path donde guardar el JSON de salida")
-    parser.add_argument("--model", default="medium", help="Tamaño/path del modelo (default: medium)")
+    parser.add_argument("--model", default="medium", help="Tamaño del modelo (default: medium)")
     args = parser.parse_args()
 
     if not Path(args.audio).exists():

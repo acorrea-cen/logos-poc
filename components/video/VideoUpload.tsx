@@ -23,8 +23,8 @@ export function VideoUpload() {
 
   const handleFile = useCallback((f: File) => {
     setError(null);
-    if (!f.name.toLowerCase().endsWith(".mp4")) {
-      setError("Solo se aceptan archivos MP4.");
+    if (!/(\.mp4|\.mkv)$/i.test(f.name)) {
+      setError("Solo se aceptan archivos MP4 o MKV.");
       return;
     }
     if (f.size > 2 * 1024 * 1024 * 1024) {
@@ -32,7 +32,7 @@ export function VideoUpload() {
       return;
     }
     setFile(f);
-    setTitle(f.name.replace(/\.mp4$/i, "").replace(/[-_]/g, " "));
+    setTitle(f.name.replace(/\.(mp4|mkv)$/i, "").replace(/[-_]/g, " "));
   }, []);
 
   const onDrop = useCallback(
@@ -59,7 +59,7 @@ export function VideoUpload() {
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("title", title || file.name.replace(/\.mp4$/i, ""));
+    formData.append("title", title || file.name.replace(/\.(mp4|mkv)$/i, ""));
     if (instructor) formData.append("instructor", instructor);
     if (category) formData.append("category", category);
 
@@ -101,15 +101,15 @@ export function VideoUpload() {
           </div>
           <div className="text-center">
             <p className="font-medium text-foreground">
-              {dragOver ? "Soltá el archivo acá" : "Arrastrá un video MP4"}
+              {dragOver ? "Soltá el archivo acá" : "Arrastrá un video MP4 o MKV"}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">o hacé click para seleccionar</p>
-            <p className="mt-2 text-xs text-muted-foreground">Solo MP4 · Máximo 2 GB</p>
+            <p className="mt-2 text-xs text-muted-foreground">MP4 o MKV · Máximo 2 GB</p>
           </div>
           <input
             ref={inputRef}
             type="file"
-            accept=".mp4,video/mp4"
+            accept=".mp4,.mkv,video/mp4,video/x-matroska"
             className="hidden"
             onChange={onInputChange}
           />

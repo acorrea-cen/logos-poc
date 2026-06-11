@@ -56,7 +56,8 @@ async function checkOllama(): Promise<{ ok: boolean; model?: string }> {
     const res = await fetch(`${host}/api/tags`, { signal: AbortSignal.timeout(3000) });
     if (!res.ok) return { ok: false };
     const data = await res.json() as { models: Array<{ name: string }> };
-    const embedModel = data.models?.find((m) => m.name.includes("nomic-embed-text"));
+    const configuredModel = process.env.OLLAMA_MODEL ?? "nomic-embed-text";
+    const embedModel = data.models?.find((m) => m.name.includes(configuredModel));
     return { ok: !!embedModel, model: embedModel?.name };
   } catch {
     return { ok: false };

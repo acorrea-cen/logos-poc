@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
   }
 
   const filename = file.name.toLowerCase();
-  if (!filename.endsWith(".mp4")) {
-    return NextResponse.json({ error: "Solo se aceptan archivos MP4" }, { status: 400 });
+  if (!filename.endsWith(".mp4") && !filename.endsWith(".mkv")) {
+    return NextResponse.json({ error: "Solo se aceptan archivos MP4 o MKV" }, { status: 400 });
   }
 
   const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2 GB
@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
   }
 
   const videoId = randomUUID().replace(/-/g, "");
-  const filepath = path.join(VIDEOS_PATH, `${videoId}.mp4`);
+  const ext = filename.endsWith(".mkv") ? ".mkv" : ".mp4";
+  const filepath = path.join(VIDEOS_PATH, `${videoId}${ext}`);
 
   try {
     await mkdir(VIDEOS_PATH, { recursive: true });
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
   }
 
   const rawTitle = (formData.get("title") as string | null)?.trim();
-  const title = rawTitle || file.name.replace(/\.mp4$/i, "");
+  const title = rawTitle || file.name.replace(/\.(mp4|mkv)$/i, "");
 
   const video = await prisma.video.create({
     data: {
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
       filepath,
       fileSize: BigInt(file.size),
       duration,
-      mimeType: "video/mp4",
+      mimeType: ext === ".mkv" ? "video/x-matroska" : "video/mp4",
       status: VideoStatus.UPLOADED,
       instructor: (formData.get("instructor") as string | null) || null,
       category: (formData.get("category") as string | null) || null,

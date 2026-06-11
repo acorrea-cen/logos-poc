@@ -32,7 +32,7 @@ const VIDEOS_PATH = path.resolve(process.cwd(), "storage", "videos");
 
 async function processFile(watchedPath: string) {
   const filename = path.basename(watchedPath);
-  if (!filename.toLowerCase().endsWith(".mp4")) return;
+  if (!/(\.mp4|\.mkv)$/i.test(filename)) return;
 
   console.log(`\n📥 Nuevo archivo detectado: ${filename}`);
 
@@ -49,7 +49,8 @@ async function processFile(watchedPath: string) {
     // Mover a storage/videos/
     await fs.mkdir(VIDEOS_PATH, { recursive: true });
     const videoId = randomUUID().replace(/-/g, "");
-    const destPath = path.join(VIDEOS_PATH, `${videoId}.mp4`);
+    const ext = filename.toLowerCase().endsWith(".mkv") ? ".mkv" : ".mp4";
+    const destPath = path.join(VIDEOS_PATH, `${videoId}${ext}`);
     await fs.rename(watchedPath, destPath);
 
     // Metadata
@@ -64,7 +65,7 @@ async function processFile(watchedPath: string) {
     // Convención: "Instructor - Categoria - Titulo.mp4"
     // Si solo hay 2 partes: "Instructor - Titulo.mp4"
     // Si solo hay 1 parte: usa el nombre como título
-    const baseName = filename.replace(/\.mp4$/i, "");
+    const baseName = filename.replace(/\.(mp4|mkv)$/i, "");
     const parts = baseName.split(" - ").map((p) => p.trim()).filter(Boolean);
     let title = baseName.replace(/[-_]/g, " ");
     let instructor: string | undefined;
@@ -88,7 +89,7 @@ async function processFile(watchedPath: string) {
         filepath: destPath,
         fileSize: BigInt(stat.size),
         duration,
-        mimeType: "video/mp4",
+        mimeType: ext === ".mkv" ? "video/x-matroska" : "video/mp4",
         status: VideoStatus.UPLOADED,
         ...(instructor ? { instructor } : {}),
         ...(category ? { category } : {}),
@@ -111,7 +112,7 @@ async function main() {
 
   console.log("👀 LOGOS — Watch Folder activo");
   console.log(`   Carpeta monitoreada: ${WATCH_PATH}`);
-  console.log("   Cualquier MP4 que copies acá se transcribirá automáticamente.\n");
+  console.log("   Cualquier MP4 o MKV que copies acá se transcribirá automáticamente.\n");
 
   const watcher = chokidar.watch(WATCH_PATH, {
     persistent: true,
