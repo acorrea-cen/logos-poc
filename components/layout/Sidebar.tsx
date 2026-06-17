@@ -8,6 +8,7 @@ import {
   Search,
   ListOrdered,
   FileText,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ServiceStatus } from "./ServiceStatus";
@@ -37,6 +38,11 @@ const navItems = [
     href: "/transcripts",
     label: "Transcripciones",
     icon: FileText,
+  },
+  {
+    href: "/config",
+    label: "Configuración",
+    icon: Settings,
   },
 ];
 

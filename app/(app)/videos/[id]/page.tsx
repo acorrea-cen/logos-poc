@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { Header } from "@/components/layout/Header";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { EditMetadataButton } from "@/components/video/EditMetadataButton";
+import { StudyMaterial } from "@/components/video/StudyMaterial";
 
 interface Props {
   params: { id: string };
@@ -18,6 +19,7 @@ export default async function VideoDetailPage({ params, searchParams }: Props) {
       segments: {
         orderBy: { segmentIndex: "asc" },
       },
+      transcript: true,
     },
   });
 
@@ -31,7 +33,7 @@ export default async function VideoDetailPage({ params, searchParams }: Props) {
         title={video.title}
         description={[video.instructor, video.category].filter(Boolean).join(" · ") || "Video"}
       />
-      <div className="p-6 space-y-4">
+      <div className="p-6 space-y-6">
         <div className="flex justify-end">
           <EditMetadataButton
             videoId={video.id}
@@ -49,6 +51,16 @@ export default async function VideoDetailPage({ params, searchParams }: Props) {
             text: s.text,
           }))}
           startAt={startAt}
+        />
+        <StudyMaterial
+          videoId={video.id}
+          segments={video.segments.map((s) => ({
+            startTime: s.startTime,
+            endTime: s.endTime,
+            text: s.text,
+            confidence: s.confidence,
+          }))}
+          initialSummary={video.transcript?.summary}
         />
       </div>
     </div>

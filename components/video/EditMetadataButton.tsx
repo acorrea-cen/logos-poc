@@ -1,20 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, X, Check } from "lucide-react";
 
-const CATEGORIES = [
-  "Cumplimiento",
-  "Créditos",
-  "Depósitos",
-  "Seguridad",
-  "Operaciones",
-  "Servicio al cliente",
-  "Tecnología",
-  "Liderazgo",
-  "Otro",
-];
+interface Option { id: string; name: string; }
 
 interface Props {
   videoId: string;
@@ -28,6 +18,19 @@ export function EditMetadataButton({ videoId, title, instructor, category }: Pro
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ title, instructor: instructor ?? "", category: category ?? "" });
+  const [instructors, setInstructors] = useState<Option[]>([]);
+  const [categories, setCategories] = useState<Option[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    Promise.all([
+      fetch("/api/instructors").then((r) => r.json()),
+      fetch("/api/categories").then((r) => r.json()),
+    ]).then(([ins, cats]) => {
+      setInstructors(ins);
+      setCategories(cats);
+    });
+  }, [open]);
 
   async function handleSave() {
     setSaving(true);
@@ -80,13 +83,26 @@ export function EditMetadataButton({ videoId, title, instructor, category }: Pro
 
               <label className="block space-y-1">
                 <span className="text-xs text-muted-foreground">Instructor</span>
-                <input
-                  type="text"
-                  value={form.instructor}
-                  onChange={(e) => setForm({ ...form, instructor: e.target.value })}
-                  placeholder="Nombre del instructor"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50"
-                />
+                {instructors.length > 0 ? (
+                  <select
+                    value={form.instructor}
+                    onChange={(e) => setForm({ ...form, instructor: e.target.value })}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="">Sin instructor</option>
+                    {instructors.map((i) => (
+                      <option key={i.id} value={i.name}>{i.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={form.instructor}
+                    onChange={(e) => setForm({ ...form, instructor: e.target.value })}
+                    placeholder="Nombre del instructor"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50"
+                  />
+                )}
               </label>
 
               <label className="block space-y-1">
@@ -97,8 +113,8 @@ export function EditMetadataButton({ videoId, title, instructor, category }: Pro
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="">Sin categoría</option>
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
                   ))}
                 </select>
               </label>

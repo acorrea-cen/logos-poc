@@ -60,6 +60,10 @@ model Transcript {
   characterCount Int
   avgConfidence  Float?
 
+  summary            String?
+  summaryModel       String?
+  summaryGeneratedAt DateTime?
+
   isEdited Boolean   @default(false)
   editedAt DateTime?
   editedBy String?
@@ -127,6 +131,20 @@ model Job {
 
   @@index([status])
   @@index([videoId])
+}
+
+model Instructor {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
 }
 
 model SearchHistory {
