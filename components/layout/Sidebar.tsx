@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ServiceStatus } from "./ServiceStatus";
+import { ThemeToggle } from "./ThemeToggle";
 
 const navItems = [
   {
@@ -50,7 +51,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-60 flex-col border-r border-border bg-card">
+    <aside className="dark flex h-full w-60 flex-col border-r border-border bg-card">
       {/* Logo */}
       <div className="flex h-16 flex-col items-center justify-center gap-1 border-b border-border px-4">
         <img src="/logo.png" alt="Logo" className="h-8 w-auto object-contain" />
@@ -85,7 +86,8 @@ export function Sidebar() {
       </nav>
 
       {/* Footer del sidebar — estado de servicios */}
-      <div className="border-t border-border p-4 space-y-3">
+      <div className="border-t border-border p-4 space-y-2">
+        <ThemeToggle />
         <ServiceStatus />
         <p className="text-[10px] text-muted-foreground text-center">LOGOS v0.1.0-poc</p>
       </div>

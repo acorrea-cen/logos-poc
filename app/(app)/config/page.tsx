@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Header } from "@/components/layout/Header";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, RefreshCw } from "lucide-react";
 
 interface Item {
   id: string;
@@ -219,21 +219,72 @@ function ABMSection({
   );
 }
 
+function RegenerateEmbeddings() {
+  const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [msg, setMsg] = useState("");
+
+  async function run() {
+    setStatus("running");
+    setMsg("");
+    try {
+      const res = await fetch("/api/embeddings/regenerate", { method: "POST" });
+      const data = await res.json() as { regenerated?: number; total?: number; errors?: string[]; message?: string };
+      if (!res.ok) { setStatus("error"); setMsg(data.message ?? "Error"); return; }
+      setStatus("done");
+      setMsg(
+        data.message ??
+        `${data.regenerated} de ${data.total} videos regenerados${data.errors?.length ? ` (${data.errors.length} errores)` : ""}.`
+      );
+    } catch {
+      setStatus("error");
+      setMsg("Error de conexión");
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-6 space-y-3">
+      <div>
+        <h3 className="font-semibold text-foreground">Embeddings de búsqueda</h3>
+        <p className="text-xs text-muted-foreground mt-1">
+          Regenerá los vectores semánticos de todos los videos si cambiaste el modelo de Ollama
+          o si los resultados de búsqueda muestran similitudes incorrectas.
+        </p>
+      </div>
+      {msg && (
+        <p className={`text-xs rounded-lg px-3 py-2 ${status === "error" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
+          {msg}
+        </p>
+      )}
+      <button
+        onClick={run}
+        disabled={status === "running"}
+        className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50 transition-colors"
+      >
+        <RefreshCw className={`h-4 w-4 ${status === "running" ? "animate-spin" : ""}`} />
+        {status === "running" ? "Regenerando… (puede tardar varios minutos)" : "Regenerar embeddings"}
+      </button>
+    </div>
+  );
+}
+
 export default function ConfigPage() {
   return (
     <div className="flex flex-col">
-      <Header title="Configuración" description="Administración de instructores y categorías" />
-      <div className="p-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <ABMSection
-          title="Instructores"
-          endpoint="/api/instructors"
-          emptyText="No hay instructores registrados. Agregá el primero."
-        />
-        <ABMSection
-          title="Categorías"
-          endpoint="/api/categories"
-          emptyText="No hay categorías registradas. Agregá la primera."
-        />
+      <Header title="Configuración" description="Administración de instructores, categorías y búsqueda" />
+      <div className="p-6 space-y-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <ABMSection
+            title="Instructores"
+            endpoint="/api/instructors"
+            emptyText="No hay instructores registrados. Agregá el primero."
+          />
+          <ABMSection
+            title="Categorías"
+            endpoint="/api/categories"
+            emptyText="No hay categorías registradas. Agregá la primera."
+          />
+        </div>
+        <RegenerateEmbeddings />
       </div>
     </div>
   );

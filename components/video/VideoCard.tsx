@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Clock, User, Tag, CheckCircle, Loader2, AlertCircle, Upload, Trash2 } from "lucide-react";
+import { Clock, User, Tag, CheckCircle, Loader2, AlertCircle, Upload, Trash2, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { formatDuration } from "@/lib/utils";
@@ -16,8 +16,10 @@ interface VideoCardProps {
   status: string;
   instructor?: string | null;
   category?: string | null;
+  topic?: string | null;
   thumbnailPath?: string | null;
   uploadedAt: string | Date;
+  recordedAt?: string | Date | null;
   wordCount?: number | null;
   latestJob?: { status: string; progress: number } | null;
 }
@@ -43,8 +45,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function VideoCard({
-  id, title, duration, status, instructor, category,
-  thumbnailPath, uploadedAt, wordCount, latestJob,
+  id, title, duration, status, instructor, category, topic,
+  thumbnailPath, uploadedAt, recordedAt, wordCount, latestJob,
 }: VideoCardProps) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
@@ -126,9 +128,20 @@ export function VideoCard({
                 <Tag className="h-3 w-3" />{category}
               </span>
             )}
+            {topic && (
+              <span className="flex items-center gap-1 text-primary/70">
+                <Tag className="h-3 w-3" />{topic}
+              </span>
+            )}
+            {recordedAt && (
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {new Date(recordedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
+              </span>
+            )}
             {wordCount != null && (
               <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />{wordCount.toLocaleString()} palabras
+                <Clock className="h-3 w-3" />{wordCount.toLocaleString("es-AR")} palabras
               </span>
             )}
           </div>

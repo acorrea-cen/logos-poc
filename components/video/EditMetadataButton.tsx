@@ -11,13 +11,21 @@ interface Props {
   title: string;
   instructor: string | null;
   category: string | null;
+  topic: string | null;
+  recordedAt: string | null;
 }
 
-export function EditMetadataButton({ videoId, title, instructor, category }: Props) {
+export function EditMetadataButton({ videoId, title, instructor, category, topic, recordedAt }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ title, instructor: instructor ?? "", category: category ?? "" });
+  const [form, setForm] = useState({
+    title,
+    instructor: instructor ?? "",
+    category: category ?? "",
+    topic: topic ?? "",
+    recordedAt: recordedAt ? recordedAt.slice(0, 10) : "",  // YYYY-MM-DD
+  });
   const [instructors, setInstructors] = useState<Option[]>([]);
   const [categories, setCategories] = useState<Option[]>([]);
 
@@ -117,6 +125,27 @@ export function EditMetadataButton({ videoId, title, instructor, category }: Pro
                     <option key={c.id} value={c.name}>{c.name}</option>
                   ))}
                 </select>
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-xs text-muted-foreground">Subtema</span>
+                <input
+                  type="text"
+                  value={form.topic}
+                  onChange={(e) => setForm({ ...form, topic: e.target.value })}
+                  placeholder="Ej: Configuración inicial, Pasajes, Testing…"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-xs text-muted-foreground">Fecha de la capacitación</span>
+                <input
+                  type="date"
+                  value={form.recordedAt}
+                  onChange={(e) => setForm({ ...form, recordedAt: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
               </label>
             </div>
 

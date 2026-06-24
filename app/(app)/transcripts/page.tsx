@@ -53,7 +53,7 @@ export default async function TranscriptsPage() {
                     {v.transcript && (
                       <span className="flex items-center gap-1">
                         · <Clock className="h-3 w-3" />
-                        {v.transcript.wordCount?.toLocaleString()} palabras
+                        {v.transcript.wordCount?.toLocaleString("es-AR")} palabras
                       </span>
                     )}
                   </div>

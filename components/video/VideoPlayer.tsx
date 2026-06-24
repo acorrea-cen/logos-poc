@@ -13,6 +13,7 @@ interface VideoPlayerProps {
   videoId: string;
   segments: Segment[];
   startAt?: number;
+  studyContent?: React.ReactNode;
 }
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2] as const;
@@ -25,7 +26,7 @@ function formatTime(s: number): string {
   return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
-export function VideoPlayer({ videoId, segments, startAt = 0 }: VideoPlayerProps) {
+export function VideoPlayer({ videoId, segments, startAt = 0, studyContent }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(startAt);
@@ -104,85 +105,102 @@ export function VideoPlayer({ videoId, segments, startAt = 0 }: VideoPlayerProps
     }
   }, [activeIndex]);
 
+  /*
+   * Layout:
+   *  - Fila superior: flex row con altura fija calculada por el aspect-ratio del video
+   *    (video 3/5 del ancho, ratio 16:9, más controles ~40px)
+   *  - Fila inferior: flex-1, ocupa el espacio restante, ancho completo
+   *
+   * La altura exacta de la fila superior:
+   *   ancho_video = (100vw - 288px[sidebar+padding] - 20px[gap]) × 3/5
+   *   alto_video  = ancho_video × 9/16  =  (100vw - 308px) × 27/80  ≈  × 0.3375
+   *   total_fila  = alto_video + 12px[gap] + 28px[controles] ≈ + 40px
+   */
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
-      {/* ── Video side ── */}
-      <div className="flex flex-col gap-3">
-        <video
-          ref={videoRef}
-          src={`/api/videos/${videoId}/stream`}
-          controls
-          className="w-full rounded-xl border border-border bg-black aspect-video"
-          onTimeUpdate={handleTimeUpdate}
-        />
-
-        {/* Speed controls */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Velocidad:</span>
-          <div className="flex rounded-lg border border-border overflow-hidden text-xs">
-            {SPEEDS.map((s) => (
-              <button
-                key={s}
-                onClick={() => changeSpeed(s)}
-                className={`px-3 py-1.5 transition-colors ${
-                  speed === s
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                {s}×
-              </button>
-            ))}
-          </div>
-          <span className="ml-2 text-xs text-muted-foreground/60">
-            Espacio = play/pause · ← → = ±5s · Shift = ±15s
-          </span>
-        </div>
-      </div>
-
-      {/* ── Transcript side ── */}
-      <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden">
-        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Transcripción
-          </p>
-          <span className="text-xs text-muted-foreground font-mono">
-            {formatTime(currentTime)}
-          </span>
-        </div>
-
-        <div ref={transcriptRef} className="flex-1 overflow-y-auto p-3 space-y-1">
-          {segments.length === 0 && (
-            <p className="text-sm text-muted-foreground p-2">Sin transcripción disponible.</p>
-          )}
-          {segments.map((seg, i) => {
-            const isActive = i === activeIndex;
-            return (
-              <div
-                key={seg.id}
-                ref={isActive ? activeSegmentRef : undefined}
-                onClick={() => seekTo(seg.startTime)}
-                className={`flex gap-3 rounded-lg px-3 py-2 cursor-pointer transition-colors ${
-                  isActive
-                    ? "bg-primary/10 border border-primary/30"
-                    : "hover:bg-muted border border-transparent"
-                }`}
-              >
-                <span className="shrink-0 text-xs text-muted-foreground w-11 pt-0.5 font-mono">
-                  {formatTime(seg.startTime)}
-                </span>
-                <p
-                  className={`text-sm leading-relaxed ${
-                    isActive ? "text-foreground font-medium" : "text-muted-foreground"
+    <div className="flex flex-col gap-4">
+      {/* ── Fila superior: video + transcripción, altura exacta ── */}
+      <div
+        className="flex gap-5 shrink-0 overflow-hidden"
+        style={{ height: "calc(0.3375 * (100vw - 308px) + 40px)" }}
+      >
+        {/* Video + controles */}
+        <div className="flex flex-col gap-3" style={{ flex: 3 }}>
+          <video
+            ref={videoRef}
+            src={`/api/videos/${videoId}/stream`}
+            controls
+            className="w-full rounded-xl border border-border bg-black aspect-video"
+            onTimeUpdate={handleTimeUpdate}
+          />
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs text-muted-foreground">Velocidad:</span>
+            <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+              {SPEEDS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => changeSpeed(s)}
+                  className={`px-3 py-1.5 transition-colors ${
+                    speed === s
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  {seg.text}
-                </p>
-              </div>
-            );
-          })}
+                  {s}×
+                </button>
+              ))}
+            </div>
+            <span className="ml-2 text-xs text-muted-foreground/60">
+              Espacio = play/pause · ← → = ±5s · Shift = ±15s
+            </span>
+          </div>
+        </div>
+
+        {/* Transcripción — h-full para llenar exactamente la fila */}
+        <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden h-full" style={{ flex: 2 }}>
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between shrink-0">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Transcripción
+            </p>
+            <span className="text-xs text-muted-foreground font-mono">
+              {formatTime(currentTime)}
+            </span>
+          </div>
+          <div ref={transcriptRef} className="flex-1 overflow-y-auto p-3 space-y-1 min-h-0">
+            {segments.length === 0 && (
+              <p className="text-sm text-muted-foreground p-2">Sin transcripción disponible.</p>
+            )}
+            {segments.map((seg, i) => {
+              const isActive = i === activeIndex;
+              return (
+                <div
+                  key={seg.id}
+                  ref={isActive ? activeSegmentRef : undefined}
+                  onClick={() => seekTo(seg.startTime)}
+                  className={`flex gap-3 rounded-lg px-3 py-2 cursor-pointer transition-colors ${
+                    isActive
+                      ? "bg-primary/10 border border-primary/30"
+                      : "hover:bg-muted border border-transparent"
+                  }`}
+                >
+                  <span className="shrink-0 text-xs text-muted-foreground w-11 pt-0.5 font-mono">
+                    {formatTime(seg.startTime)}
+                  </span>
+                  <p className={`text-sm leading-relaxed ${isActive ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                    {seg.text}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
+
+      {/* ── Fila inferior: resumen ancho completo, altura libre ── */}
+      {studyContent && (
+        <div>
+          {studyContent}
+        </div>
+      )}
     </div>
   );
 }

@@ -59,8 +59,8 @@ export async function semanticSearch(
   // independientemente del gap absoluto entre queries distintas.
   // MIN_ABS como piso absoluto para evitar matches con corpus muy comprimido.
   const Z_SCORE = 1.5;
-  const MIN_ABS = 0.40;
-  const MIN_SIGNAL = 0.05; // gap mínimo para que exista señal real
+  const MIN_ABS = 0.55;    // mxbai-embed-large: matches reales arrancan ~0.55
+  const MIN_SIGNAL = 0.06; // gap mínimo para que exista señal real
 
   const gap = maxScore - avgScore;
   if (maxScore < MIN_ABS || gap < MIN_SIGNAL) {

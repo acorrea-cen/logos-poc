@@ -13,8 +13,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className="dark">
-      {/* Sin Google Fonts — fuentes del sistema para cumplir air-gap */}
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        {/* Anti-FOUC: aplica el tema antes del primer render */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}`,
+          }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

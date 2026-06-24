@@ -3,7 +3,38 @@
 @tailwind utilities;
 
 @layer base {
+  /* Tema claro */
   :root {
+    --background: 214 32% 97%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --primary: 217 91% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 214 32% 91%;
+    --secondary-foreground: 222 47% 15%;
+
+    --muted: 214 32% 91%;
+    --muted-foreground: 215 20% 45%;
+
+    --accent: 214 32% 91%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 85%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 52%;
+
+    --radius: 0.5rem;
+  }
+
+  /* Tema oscuro */
+  .dark {
     --background: 222 47% 8%;
     --foreground: 210 40% 96%;
 

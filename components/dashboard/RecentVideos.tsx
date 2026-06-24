@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, User, Tag, ArrowRight } from "lucide-react";
+import { Clock, User, Tag, ArrowRight, Calendar } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
 
 interface VideoEntry {
@@ -8,6 +8,7 @@ interface VideoEntry {
   duration: number;
   instructor: string | null;
   category: string | null;
+  recordedAt: Date | null;
   thumbnailPath: string | null;
   processedAt: Date | null;
   transcript: { wordCount: number | null } | null;
@@ -19,7 +20,7 @@ function RelativeTime({ date }: { date: Date | null }) {
   const hours = Math.floor(diff / 3_600_000);
   const days = Math.floor(diff / 86_400_000);
   const label = days > 0 ? `hace ${days}d` : hours > 0 ? `hace ${hours}h` : "hoy";
-  return <span className="text-xs text-muted-foreground">{label}</span>;
+  return <span className="text-xs text-muted-foreground" suppressHydrationWarning>{label}</span>;
 }
 
 export function RecentVideos({ videos }: { videos: VideoEntry[] }) {
@@ -66,6 +67,12 @@ export function RecentVideos({ videos }: { videos: VideoEntry[] }) {
                 {v.category && (
                   <span className="flex items-center gap-0.5">
                     <Tag className="h-3 w-3" /> {v.category}
+                  </span>
+                )}
+                {v.recordedAt && (
+                  <span className="flex items-center gap-0.5">
+                    <Calendar className="h-3 w-3" />
+                    {new Date(v.recordedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
                   </span>
                 )}
                 <span className="flex items-center gap-0.5">

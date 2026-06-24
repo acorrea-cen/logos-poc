@@ -10,10 +10,10 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-// Cosine similarity suele caer en 0.50–0.90 para nomic-embed-text.
-// Lo normalizamos a 0–100% dentro de ese rango para que sea más legible.
+// mxbai-embed-large: similitudes coseno típicas 0.30–0.95 para retrieval.
+// Normalizamos a 0–100% dentro del rango útil.
 function similarityPercent(score: number): number {
-  const MIN = 0.45;
+  const MIN = 0.30;
   const MAX = 0.92;
   return Math.round(Math.min(100, Math.max(0, ((score - MIN) / (MAX - MIN)) * 100)));
 }
@@ -28,8 +28,8 @@ export function ResultCard({ result }: ResultCardProps) {
   const isSemantic = result.matchType === "semantic";
   const isHybrid = result.matchType === "hybrid";
   const rawSimScore = result.semanticScore ?? (isSemantic ? result.score : 0);
-  const showSimilarity = (isSemantic || isHybrid) && rawSimScore > 0;
-  const pct = showSimilarity ? similarityPercent(rawSimScore) : 0;
+  const pct = similarityPercent(rawSimScore);
+  const showSimilarity = (isSemantic || isHybrid) && pct > 0;
 
   return (
     <Link

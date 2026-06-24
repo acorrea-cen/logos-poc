@@ -1,3 +1,4 @@
+import { BookOpen, Tag } from "lucide-react";
 import { VideoSummary } from "@/components/video/VideoSummary";
 
 interface Segment {
@@ -34,37 +35,42 @@ export function StudyMaterial({ videoId, segments, initialSummary }: Props) {
   const terms = findTerms(segments);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6 space-y-6">
-      <h2 className="text-base font-semibold text-foreground tracking-wide uppercase">
-        Material de Estudio
-      </h2>
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      {/* Header de la sección */}
+      <div className="flex items-center gap-2.5 border-b border-border bg-muted/40 px-6 py-3">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <BookOpen className="h-3.5 w-3.5 text-primary" />
+        </div>
+        <span className="text-sm font-semibold text-foreground">Material de Estudio</span>
+        <span className="ml-auto text-[11px] text-muted-foreground">Generado por IA</span>
+      </div>
 
-      {/* Resumen con IA */}
-      <section className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          Resumen
-        </h3>
+      <div className="px-6 py-5 space-y-6">
+        {/* Resumen */}
         <VideoSummary videoId={videoId} initialSummary={initialSummary} />
-      </section>
 
-      {/* Términos técnicos */}
-      {terms.length > 0 && (
-        <section className="space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Términos Técnicos Mencionados
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {terms.map((t) => (
-              <span
-                key={t}
-                className="rounded-md border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground"
-              >
-                {t}
+        {/* Términos técnicos */}
+        {terms.length > 0 && (
+          <div className="space-y-3 pt-4 border-t border-border">
+            <div className="flex items-center gap-2">
+              <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Términos mencionados
               </span>
-            ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {terms.map((t) => (
+                <span
+                  key={t}
+                  className="rounded-full bg-primary/8 border border-primary/20 px-3 py-1 text-xs font-medium text-primary"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
           </div>
-        </section>
-      )}
+        )}
+      </div>
     </div>
   );
 }

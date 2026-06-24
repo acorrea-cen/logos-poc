@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, FileVideo, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, formatFileSize } from "@/lib/utils";
 
-const CATEGORIES = ["Cuentas", "Tarjetas", "Compliance", "Procesos", "Normativa", "Onboarding", "Otro"];
+interface Option { id: string; name: string; }
 
 export function VideoUpload() {
   const router = useRouter();
@@ -20,6 +20,23 @@ export function VideoUpload() {
   const [title, setTitle] = useState("");
   const [instructor, setInstructor] = useState("");
   const [category, setCategory] = useState("");
+  const [topic, setTopic] = useState("");
+  const [recordedAt, setRecordedAt] = useState("");
+
+  const [instructors, setInstructors] = useState<Option[]>([]);
+  const [categories, setCategories] = useState<Option[]>([]);
+
+  // Cargar opciones al mostrar el formulario
+  useEffect(() => {
+    if (!file) return;
+    Promise.all([
+      fetch("/api/instructors").then((r) => r.json()),
+      fetch("/api/categories").then((r) => r.json()),
+    ]).then(([ins, cats]) => {
+      setInstructors(ins);
+      setCategories(cats);
+    });
+  }, [file]);
 
   const handleFile = useCallback((f: File) => {
     setError(null);
@@ -62,6 +79,8 @@ export function VideoUpload() {
     formData.append("title", title || file.name.replace(/\.(mp4|mkv)$/i, ""));
     if (instructor) formData.append("instructor", instructor);
     if (category) formData.append("category", category);
+    if (topic) formData.append("topic", topic);
+    if (recordedAt) formData.append("recordedAt", recordedAt);
 
     try {
       const res = await fetch("/api/videos/upload", { method: "POST", body: formData });
@@ -149,12 +168,25 @@ export function VideoUpload() {
 
             <div className="grid grid-cols-2 gap-4">
               <Field label="Instructor">
-                <input
-                  value={instructor}
-                  onChange={(e) => setInstructor(e.target.value)}
-                  placeholder="Nombre del instructor"
-                  className="input"
-                />
+                {instructors.length > 0 ? (
+                  <select
+                    value={instructor}
+                    onChange={(e) => setInstructor(e.target.value)}
+                    className="input"
+                  >
+                    <option value="">Sin instructor</option>
+                    {instructors.map((i) => (
+                      <option key={i.id} value={i.name}>{i.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={instructor}
+                    onChange={(e) => setInstructor(e.target.value)}
+                    placeholder="Nombre del instructor"
+                    className="input"
+                  />
+                )}
               </Field>
 
               <Field label="Categoría">
@@ -164,10 +196,29 @@ export function VideoUpload() {
                   className="input"
                 >
                   <option value="">Sin categoría</option>
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
                   ))}
                 </select>
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Subtema">
+                <input
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="Ej: Chequera Digital, Liquidaciones…"
+                  className="input"
+                />
+              </Field>
+              <Field label="Fecha de la capacitación">
+                <input
+                  type="date"
+                  value={recordedAt}
+                  onChange={(e) => setRecordedAt(e.target.value)}
+                  className="input"
+                />
               </Field>
             </div>
           </div>

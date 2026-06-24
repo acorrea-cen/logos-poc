@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
-import { VideoCard } from "@/components/video/VideoCard";
+import { VideoGrid } from "@/components/video/VideoGrid";
 import { prisma } from "@/lib/db/prisma";
 import { Upload } from "lucide-react";
 
@@ -52,23 +52,22 @@ export default async function VideosPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
-            {videos.map((v) => (
-              <VideoCard
-                key={v.id}
-                id={v.id}
-                title={v.title}
-                duration={v.duration}
-                status={v.status}
-                instructor={v.instructor}
-                category={v.category}
-                thumbnailPath={v.thumbnailPath}
-                uploadedAt={v.uploadedAt}
-                wordCount={v.transcript?.wordCount}
-                latestJob={v.jobs[0] ?? null}
-              />
-            ))}
-          </div>
+          <VideoGrid
+            videos={videos.map((v) => ({
+              id: v.id,
+              title: v.title,
+              duration: v.duration,
+              status: v.status,
+              instructor: v.instructor,
+              category: v.category,
+              topic: v.topic,
+              thumbnailPath: v.thumbnailPath,
+              uploadedAt: v.uploadedAt.toISOString(),
+              recordedAt: v.recordedAt?.toISOString() ?? null,
+              wordCount: v.transcript?.wordCount,
+              latestJob: v.jobs[0] ?? null,
+            }))}
+          />
         )}
       </div>
     </div>

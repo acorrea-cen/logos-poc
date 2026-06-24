@@ -45,6 +45,7 @@ async function getRecentVideos() {
       duration: true,
       instructor: true,
       category: true,
+      recordedAt: true,
       thumbnailPath: true,
       processedAt: true,
       transcript: { select: { wordCount: true } },

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json();
-  const { title, instructor, category } = body;
+  const { title, instructor, category, topic, recordedAt } = body;
 
   const video = await prisma.video.update({
     where: { id: params.id },
@@ -13,8 +13,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(title !== undefined && { title: title.trim() }),
       ...(instructor !== undefined && { instructor: instructor?.trim() || null }),
       ...(category !== undefined && { category: category?.trim() || null }),
+      ...(topic !== undefined && { topic: topic?.trim() || null }),
+      ...(recordedAt !== undefined && {
+        recordedAt: recordedAt ? new Date(recordedAt) : null,
+      }),
     },
-    select: { id: true, title: true, instructor: true, category: true },
+    select: { id: true, title: true, instructor: true, category: true, topic: true, recordedAt: true },
   });
 
   return NextResponse.json(video);

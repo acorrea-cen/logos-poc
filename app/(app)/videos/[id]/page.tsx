@@ -27,21 +27,42 @@ export default async function VideoDetailPage({ params, searchParams }: Props) {
 
   const startAt = searchParams.t ? Number(searchParams.t) : 0;
 
+  const studyMaterial = (
+    <StudyMaterial
+      videoId={video.id}
+      segments={video.segments.map((s) => ({
+        startTime: s.startTime,
+        endTime: s.endTime,
+        text: s.text,
+        confidence: s.confidence,
+      }))}
+      initialSummary={video.transcript?.summary}
+    />
+  );
+
   return (
     <div className="flex flex-col">
       <Header
         title={video.title}
-        description={[video.instructor, video.category].filter(Boolean).join(" · ") || "Video"}
+        description={[
+          video.instructor,
+          video.category,
+          video.recordedAt
+            ? new Date(video.recordedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })
+            : null,
+        ].filter(Boolean).join(" · ") || "Video"}
       />
-      <div className="p-6 space-y-6">
-        <div className="flex justify-end">
-          <EditMetadataButton
-            videoId={video.id}
-            title={video.title}
-            instructor={video.instructor}
-            category={video.category}
-          />
-        </div>
+      <div className="flex items-center justify-end px-6 py-2">
+        <EditMetadataButton
+          videoId={video.id}
+          title={video.title}
+          instructor={video.instructor}
+          category={video.category}
+          topic={video.topic ?? null}
+          recordedAt={video.recordedAt?.toISOString() ?? null}
+        />
+      </div>
+      <div className="px-6 pb-8">
         <VideoPlayer
           videoId={video.id}
           segments={video.segments.map((s) => ({
@@ -51,16 +72,7 @@ export default async function VideoDetailPage({ params, searchParams }: Props) {
             text: s.text,
           }))}
           startAt={startAt}
-        />
-        <StudyMaterial
-          videoId={video.id}
-          segments={video.segments.map((s) => ({
-            startTime: s.startTime,
-            endTime: s.endTime,
-            text: s.text,
-            confidence: s.confidence,
-          }))}
-          initialSummary={video.transcript?.summary}
+          studyContent={studyMaterial}
         />
       </div>
     </div>
